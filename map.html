@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1883: The Duttons' Journey</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Leaflet CSS for the map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+    <style>
+        /* Custom font and ensuring the map container has a defined height */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #map { 
+            height: 65vh; /* Adjusted height */
+            border-radius: 0.75rem; /* Rounded corners */
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        
+        /* Spinner for loading indicator */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #B9770E;
+            width: 40px;
+            height: 40px;
+            -webkit-animation: spin 2s linear infinite; /* Safari */
+            animation: spin 2s linear infinite;
+        }
+
+        /* Safari */
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 antialiased">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">The Trail of 1883</h1>
+            <p class="text-lg text-gray-600 mt-2">An interactive map of the Dutton family's perilous journey to Montana.</p>
+        </header>
+
+        <!-- The map container -->
+        <div id="map"></div>
+
+        <!-- Gemini API Feature Section -->
+        <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Check Historical Accuracy</h2>
+            <p class="text-gray-600 mb-4">Have a question about the show? Ask the Gemini AI to get more details about the historical context of "1883".</p>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <input type="text" id="ai-prompt-input" class="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-800" placeholder="e.g., Was the Red River crossing that dangerous?">
+                <button id="ai-submit-btn" class="bg-yellow-900 hover:bg-yellow-800 text-white font-bold py-3 px-6 rounded-md transition duration-300">
+                    Ask Gemini
+                </button>
+            </div>
+            <div id="ai-response-container" class="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200 min-h-[100px] text-gray-700 leading-relaxed">
+                Your answer will appear here...
+            </div>
+             <div id="loader-container" class="hidden justify-center items-center mt-4">
+                <div class="loader"></div>
+            </div>
+        </div>
+
+
+        <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">About the Journey</h2>
+            <p class="text-gray-700 leading-relaxed">
+                The miniseries "1883" chronicles the post-Civil War generation of the Dutton family as they embark on a life-altering journey. Starting in Fort Worth, Texas, they join a wagon train of German immigrants led by Shea Brennan and Thomas. Their initial goal is Oregon, but the brutal realities of the trail force them to forge a new path. The route shown on the map is an interpretation based on the events of the series, combining elements of historical cattle trails with the dramatic narrative. It highlights the immense challenges—from treacherous river crossings to lawless territories—that they faced on their quest for a new beginning, which ultimately led them to the pristine lands of what would become the Yellowstone Dutton Ranch in Montana.
+            </p>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Map Initialization ---
+        const map = L.map('map').setView([40.5, -102], 4.5);
+
+        // --- Tile Layer ---
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // --- Route Coordinates ---
+        const routeCoordinates = [
+            [32.7555, -97.3308],   // 1. Fort Worth, TX (Start)
+            [33.9137, -98.4934],   // 2. Red River Crossing (into Indian Territory)
+            [37.1692, -104.5003],  // 3. Southeastern Colorado
+            [42.8666, -106.3131],  // 4. Central Wyoming (near where the trail gets harsh)
+            [45.3888, -110.7466]   // 5. Paradise Valley, MT (Final Destination)
+        ];
+
+        // --- Draw the Route Polyline ---
+        const routeLine = L.polyline(routeCoordinates, {
+            color: '#B9770E',
+            weight: 5,
+            opacity: 0.8,
+            smoothFactor: 1
+        }).addTo(map);
+
+        map.fitBounds(routeLine.getBounds().pad(0.2)); 
+
+        // --- Map Markers ---
+        const fortWorthMarker = L.marker([32.7555, -97.3308]).addTo(map)
+            .bindPopup("<b>Start: Fort Worth, Texas</b><br>The journey begins. The Duttons meet the wagon train and prepare for the arduous trek west.")
+            .openPopup();
+
+        const redRiverMarker = L.marker([33.9137, -98.4934]).addTo(map)
+            .bindPopup("<b>Red River Crossing</b><br>Leaving Texas, the caravan enters the dangerous and lawless Indian Territory.");
+
+        const wyomingMarker = L.marker([42.8666, -106.3131]).addTo(map)
+            .bindPopup("<b>Wyoming Territory</b><br>The terrain becomes mountainous and unforgiving, testing the pioneers' endurance as winter approaches.");
+            
+        const montanaMarker = L.marker([45.3888, -110.7466]).addTo(map)
+            .bindPopup("<b>End: Paradise Valley, Montana</b><br>After immense loss, the Duttons find their promised land, the future site of the Yellowstone Ranch.");
+
+        // --- Gemini API Integration ---
+        const submitButton = document.getElementById('ai-submit-btn');
+        const promptInput = document.getElementById('ai-prompt-input');
+        const responseContainer = document.getElementById('ai-response-container');
+        const loaderContainer = document.getElementById('loader-container');
+
+        submitButton.addEventListener('click', async () => {
+            const userPrompt = promptInput.value.trim();
+            if (!userPrompt) {
+                responseContainer.innerText = "Please enter a question first.";
+                return;
+            }
+
+            // Show loader and hide response container
+            loaderContainer.classList.remove('hidden');
+            loaderContainer.classList.add('flex');
+            responseContainer.classList.add('hidden');
+            responseContainer.innerText = "";
+
+            // Construct the full prompt for the Gemini API
+            const fullPrompt = `Regarding the historical accuracy of the TV series "1883", please answer the following question: "${userPrompt}". Provide a concise and informative answer based on historical facts.`;
+
+            try {
+                // Prepare the payload for the Gemini API call
+                let chatHistory = [{ role: "user", parts: [{ text: fullPrompt }] }];
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // API key will be automatically handled by the environment
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                // Make the fetch request to the Gemini API
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                // Process the response and display it
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    responseContainer.innerText = text;
+                } else {
+                    throw new Error("Invalid response structure from API.");
+                }
+
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                responseContainer.innerText = "Sorry, something went wrong while fetching the answer. Please try again later.";
+            } finally {
+                 // Hide loader and show response container
+                loaderContainer.classList.add('hidden');
+                loaderContainer.classList.remove('flex');
+                responseContainer.classList.remove('hidden');
+            }
+        });
+
+    </script>
+
+</body>
+</html>
